@@ -10,6 +10,10 @@ df = pd.read_csv("data.csv")
 def index():
     return render_template('index.html')
 
+@app.route('/json_data')
+def json_data():
+    return render_template('json_data.html')
+
 @app.route('/search', methods=['GET'])
 def search():
     print("Request args:", request.args)
@@ -20,7 +24,7 @@ def search():
     
     print(df.columns)
 
-    results = df[df['Title'].str.contains(keyword, case=False, na=False)]
+    results = df[df['title'].str.contains(keyword, case=False, na=False)]
     data = results.replace({np.nan: None}).to_dict(orient='records')
 
     return jsonify({"results": data})

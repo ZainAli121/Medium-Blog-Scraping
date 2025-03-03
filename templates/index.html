@@ -1,39 +1,67 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search CSV Data</title>
+    <title>Binary Blogs</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 flex justify-center items-center min-h-screen">
-    <div class="w-full max-w-3xl bg-white p-6 rounded-lg shadow-lg">
-        <h2 class="text-2xl font-bold text-center text-gray-700">Search CSV Data</h2>
-        <form id="searchForm" class="mt-4 flex">
-            <input type="text" id="keyword" name="keyword" class="flex-1 p-2 border rounded-l-lg focus:outline-none" placeholder="Enter keyword...">
-            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-r-lg hover:bg-blue-600">Search</button>
-        </form>
 
-        <!-- Loader -->
-        <div id="loader" class="hidden flex justify-center mt-6">
-            <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-500"></div>
-        </div>
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="/"><h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                        Binary Blogs
+                    </h1></a>
+                    <div class="hidden md:flex items-center ml-10 space-x-8">
+                        <a href="#" class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Blogs</a>
+                        <a href="/json_data" class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">JSON</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
 
-        <div id="results" class="mt-6">
-            <!-- Results will appear here -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
+            <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">Search Articles</h2>
+            <form id="searchForm" class="flex gap-4">
+                <input type="text" id="keyword" name="keyword" 
+                       class="flex-1 p-3 border dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                       placeholder="Search articles...">
+                <button type="submit" 
+                        class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Search
+                </button>
+            </form>
+
+            <!-- Loader -->
+            <div id="loader" class="hidden flex justify-center mt-6">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
+            </div>
+
+            <div id="results" class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Results will appear here -->
+            </div>
         </div>
-    </div>
+    </main>
 
     <script>
+       
+
+        // Search form handling
         document.getElementById("searchForm").addEventListener("submit", function(event) {
             event.preventDefault();
-            let keyword = document.getElementById("keyword").value.trim();
-            let resultsDiv = document.getElementById("results");
-            let loader = document.getElementById("loader");
+            const keyword = document.getElementById("keyword").value.trim();
+            const resultsDiv = document.getElementById("results");
+            const loader = document.getElementById("loader");
 
-            if (keyword === "") {
-                alert("Please enter a keyword!");
+            if (!keyword) {
+                alert("Please enter a search term");
                 return;
             }
 
@@ -42,55 +70,57 @@
 
             axios.get(`/search?keyword=${encodeURIComponent(keyword)}`)
                 .then(response => {
-                    console.log("Response:", response);
-                    loader.classList.add("hidden"); // Hide loader
-                    let data = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
-                    let results = data.results || [];
+                    loader.classList.add("hidden");
+                    const data = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
+                    const results = data.results || [];
 
-                    if (!Array.isArray(results) || results.length === 0) {
-                        resultsDiv.innerHTML = "<p class='text-gray-500 text-center'>No results found.</p>";
+                    if (!results.length) {
+                        resultsDiv.innerHTML = `
+                            <div class="col-span-full text-center py-12">
+                                <p class="text-gray-500 dark:text-gray-400">No articles found matching your search.</p>
+                            </div>
+                        `;
                         return;
                     }
 
-                    let resultHTML = `<div class="mt-4 space-y-4">`;
-                    results.forEach(item => {
-                        let title = item.Title || "No Title";
-                        let url = item.URL || "#";
-                        let subtitle = item.Subtitle || "No description available.";
-                        let article = item.Article ? item.Article.substring(0, 200) + "..." : "No article preview available.";
-                        let author = item.Author || "Unknown Author";
-                        let authorURL = item["Author URL"] || "#";
-                        let claps = item.Claps || "0";
-                        let readingTime = item["Reading Time"] || "Unknown";
-
-                        let imageSrc = "https://via.placeholder.com/400";
-                        if (item["Image Sources"]) {
-                            let images = item["Image Sources"].split(",").map(img => img.trim());
-                            imageSrc = images.length > 0 ? images[0] : imageSrc;
-                        }
-
-                        resultHTML += `
-                            <div class="p-4 border rounded-lg bg-gray-50 shadow-md">
-                                <img src="${imageSrc}" alt="Article Image" class="w-full h-40 object-cover rounded-md mb-2">
-                                <h3 class="text-lg font-semibold text-gray-800">
-                                    <a href="${url}" target="_blank" class="text-blue-600 hover:underline">${title}</a>
+                    resultsDiv.innerHTML = results.map(item => `
+                        <article class="bg-white dark:bg-gray-700 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                            <img src="	https://fireprenair.s3.amazonaws.com/home/images/how_it_works.png" 
+                                 alt="${item.title || 'Article image'}" 
+                                 class="w-full h-48 object-cover rounded-t-xl">
+                            <div class="p-4">
+                                <h3 class="text-xl font-semibold mb-2 dark:text-white">
+                                    <a target="_blank" href="${item.url || '#'}" 
+                                       class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                        ${item.title || 'Untitled Article'}
+                                    </a>
                                 </h3>
-                                <p class="text-gray-600">${subtitle}</p>
-                                <p class="text-sm text-gray-500 mt-1">${article}</p>
-                                <div class="flex items-center justify-between mt-2 text-sm text-gray-500">
-                                    <a href="${authorURL}" target="_blank" class="text-blue-500 hover:underline">${author}</a>
-                                    <span>👏 ${claps} | ⏳ ${readingTime} min read</span>
+                                <p class="text-gray-600 dark:text-gray-300 mb-3">
+                                    ${item.subtitle || 'No description available'}
+                                </p>
+                                <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                                    <a target="_blank" href="${item.author_url || '#'}" 
+                                       class="hover:text-blue-600 dark:hover:text-blue-400">
+                                        ${item.author || 'Unknown Author'}
+                                    </a>
+                                    <div class="flex items-center space-x-2">
+                                        <span>👏 ${item.claps || '0'}</span>
+                                        <span>•</span>
+                                        <span>⏳ ${item.reading_time || '??'} min</span>
+                                    </div>
                                 </div>
                             </div>
-                        `;
-                    });
-                    resultHTML += `</div>`;
-                    resultsDiv.innerHTML = resultHTML;
+                        </article>
+                    `).join('');
                 })
                 .catch(error => {
-                    console.error("Error fetching results:", error);
-                    loader.classList.add("hidden"); 
-                    resultsDiv.innerHTML = "<p class='text-red-500 text-center'>Error fetching results.</p>";
+                    console.error("Error:", error);
+                    loader.classList.add("hidden");
+                    resultsDiv.innerHTML = `
+                        <div class="col-span-full text-center py-12">
+                            <p class="text-red-500 dark:text-red-400">Error loading articles. Please try again.</p>
+                        </div>
+                    `;
                 });
         });
     </script>

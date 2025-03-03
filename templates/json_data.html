@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Viewer - Binary Blogs</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/json-viewer/1.2.0/json-viewer.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/json-viewer/1.2.0/json-viewer.min.js"></script>
+    <style>
+        .json-container {
+            background: #f8fafc;
+            min-height: 200px;
+            height: auto;
+        }
+
+        .dark .json-container {
+            background: #1e293b;
+        }
+
+        @media (max-width: 768px) {
+            .json-container {
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+        }
+
+        .dark .json-container {
+            background: #1e293b;
+        }
+
+        /* Add wrapping for pre element */
+        #jsonViewer {
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+
+        #copyBtn {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .dark #copyBtn {
+            background: rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="/">
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                            Binary Blogs
+                        </h1>
+                    </a>
+                    <div class="hidden md:flex items-center ml-10 space-x-8">
+                        <a href="/"
+                            class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Blogs</a>
+                        <a href="/json_data"
+                            class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">JSON</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
+            <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">JSON Data Explorer</h2>
+            <form id="jsonSearchForm" class="flex gap-4 mb-6">
+                <input type="text" id="jsonKeyword" name="keyword"
+                    class="flex-1 p-3 border dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="Search JSON data...">
+                <button type="submit"
+                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Search
+                </button>
+            </form>
+
+            <!-- Loader -->
+            <div id="jsonLoader" class="hidden flex justify-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500"></div>
+            </div>
+
+            <div id="jsonResults" class="json-container relative min-h-[200px]" style="color: white;">
+                <button id="copyBtn"
+                    class="absolute top-2 right-2 p-2 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                    <i class="far fa-copy"></i>
+                    <i class="fas fa-check hidden"></i>
+                </button>
+                <pre id="jsonViewer" class="m-0 p-0 break-words whitespace-pre-wrap"></pre>
+            </div>
+
+            <div id="jsonError" class="hidden mt-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/20">
+                <p class="text-red-600 dark:text-red-400 text-center"></p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // JSON Search handling
+        document.getElementById("jsonSearchForm").addEventListener("submit", function (event) {
+            event.preventDefault();
+            const keyword = document.getElementById("jsonKeyword").value.trim();
+            const resultsDiv = document.getElementById("jsonViewer");
+            const loader = document.getElementById("jsonLoader");
+            const errorDiv = document.getElementById("jsonError");
+
+            if (!keyword) {
+                showError("Please enter a search term");
+                return;
+            }
+
+            loader.classList.remove("hidden");
+            errorDiv.classList.add("hidden");
+            resultsDiv.innerHTML = "";
+
+            axios.get(`/search?keyword=${encodeURIComponent(keyword)}`)
+                .then(response => {
+                    loader.classList.add("hidden");
+                    const data = response.data.results || [];
+
+                    if (data.length === 0) {
+                        showError("No results found");
+                        return;
+                    }
+
+                    // Format JSON with syntax highlighting
+                    resultsDiv.innerHTML = "";
+                    const formattedJson = JSON.stringify(data, null, 2);
+                    const jsonViewer = document.createElement('div');
+                    jsonViewer.innerHTML = syntaxHighlight(formattedJson);
+                    resultsDiv.appendChild(jsonViewer);
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    loader.classList.add("hidden");
+                    showError("Error fetching data. Please try again.");
+                });
+        });
+
+        function syntaxHighlight(json) {
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+                function (match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById("jsonError");
+            errorDiv.querySelector('p').textContent = message;
+            errorDiv.classList.remove("hidden");
+        }
+
+
+        // copy the json
+        document.getElementById('copyBtn').addEventListener('click', copyJSON);
+        async function copyJSON() {
+            const copyIcon = document.querySelector('#copyBtn .fa-copy');
+            const checkIcon = document.querySelector('#copyBtn .fa-check');
+            const pre = document.getElementById('jsonViewer');
+
+            try {
+                // Get raw text without syntax highlighting spans
+                const textToCopy = pre.innerText;
+                await navigator.clipboard.writeText(textToCopy);
+
+                // Visual feedback
+                copyIcon.classList.add('hidden');
+                checkIcon.classList.remove('hidden');
+
+                // Reset icon after 2 seconds
+                setTimeout(() => {
+                    copyIcon.classList.remove('hidden');
+                    checkIcon.classList.add('hidden');
+                }, 2000);
+            } catch (err) {
+                showError('Failed to copy JSON');
+                console.error('Copy failed:', err);
+            }
+        }
+    </script>
+</body>
+
+</html>
