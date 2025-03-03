@@ -17,7 +17,6 @@ Open your browser and go to `https://zainali121.pythonanywhere.com`
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/ZainAli121/Medium-Blog-Scraping
-   cd Medium-Blog-Scraping
 
 2. **Create Virtual Envirenment**:
    ```bash
